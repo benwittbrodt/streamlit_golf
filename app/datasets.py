@@ -145,3 +145,19 @@ def map():
 
     fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
     return fig
+
+def performance_by_par(filter):
+    sql = """
+        select (strokes - hole_par) as score, hole_par, hole_length_yards , hole_handicap, putts, fairwayshotoutcome 
+        from hole_history
+        where strokes is not null 
+        """
+    par_perf_df = pd.read_sql(sql,conn)
+    par_perf_df_slim = par_perf_df[par_perf_df["hole_par"] == filter]
+    df_sorted = par_perf_df_slim.sort_values(by='score')
+    
+    plot = px.pie(df_sorted,names='score',labels={'score':'score'}, color_discrete_sequence=px.colors.sequential.Turbo)
+    plot.update_traces(textposition='inside', textinfo='percent+label')
+  
+
+    return plot
