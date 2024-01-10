@@ -4,13 +4,16 @@ import pandas as pd
 import altair as alt 
 import plotly.express as px 
 import plotly.graph_objects as go
-import matplotlib.pyplot as plt
 import numpy as np
 import os 
+from dotenv import load_dotenv
 
+load_dotenv()
+
+DB_LOC = os.getenv('DB_LOC')
 
 cwd = os.getcwd()
-conn = db.connect('/Users/ben/projects/streamlit_golf/db/golf.db')
+conn = db.connect(DB_LOC)
 cur = conn.cursor()
 
 
@@ -30,30 +33,23 @@ def distance_per_club():
     df1 = pd.read_sql(sql,conn)
 
 
-
     # Filter the DataFrame for anything erroneously long and for the putter as distance really doesn't matter
-    filtered_df = df1[(df1['yards']<325 ) & (df1['club'] != 'Putter')] #[df1['retired'] == 1]
+    filtered_df = df1[(df1['yards']<325 ) & (df1['club'] != 'Putter')]
+
     slim_filtered_df = filtered_df[['club','yards','retired']].copy()
     # Calculate the average yards per club
     average_yards_per_club = slim_filtered_df.groupby('club')['yards'].mean().sort_values().reset_index()
 
 
     sorted = pd.merge(slim_filtered_df,average_yards_per_club,on='club').rename(columns={'yards_y':'club_avg','yards_x':'yards'})
-    # sorted[['club','club_avg']].drop_duplicates()
+    sorted_clean = sorted[(sorted['yards']> (sorted['club_avg']/2))]
 
     custom_order = sorted['club'].iloc[::-1].unique()
+    
+    fig = px.box(sorted_clean, x='club', y='yards', category_orders={
+        'club':custom_order}, color='club')
 
-    chart = alt.Chart(sorted).mark_boxplot().encode(
-        x=alt.X('club:N', sort=custom_order),
-        y='yards:Q',
-        color=alt.Color('club:N',legend=None)
-        # tooltip=['club:N', 'yards:Q']
-    ).properties(
-        width=800,
-        height=400,
-        title='Yardage gap Analysis per club'
-    )
-    return chart
+    return fig
 
 
 def driving_accuracy():
@@ -101,7 +97,7 @@ def driving_accuracy():
 
 def map():
     """
-    Needs work
+    Needs work - doesn't show the full source of data and not all shots are combined
     """
     sql = """select scorecardid,shotorder,clubid,holenumber,startloc_lat,startloc_lon,endloc_lat,endloc_lon  
     from shot 
@@ -146,17 +142,39 @@ def map():
     fig.update_layout(mapbox_style="open-street-map", margin={"r":0,"t":0,"l":0,"b":0})
     return fig
 
+def score_map(row):
+    score_dict = { 
+        -3 : "Albatross",
+        -2 : "Eagle",
+        -1 : "Birdie",
+        0 : "Par",
+        1 : "Bogey",
+        2 : "Double Bogey",
+        3 : "Triple Bogey"
+        }
+    if row['strokes'] == 1:
+        score_name = 'Hole in One'
+    elif row['score'] < 4: 
+        score_name = score_dict[row['score']]
+    else:
+        score_name = f"+{row['score']}"
+
+    return score_name
+
 def performance_by_par(filter):
     sql = """
-        select (strokes - hole_par) as score, hole_par, hole_length_yards , hole_handicap, putts, fairwayshotoutcome 
+        select (strokes - hole_par) as score, hole_par, strokes, hole_length_yards , hole_handicap, putts, fairwayshotoutcome 
         from hole_history
         where strokes is not null 
         """
     par_perf_df = pd.read_sql(sql,conn)
-    par_perf_df_slim = par_perf_df[par_perf_df["hole_par"] == filter]
-    df_sorted = par_perf_df_slim.sort_values(by='score')
-    
-    plot = px.pie(df_sorted,names='score',labels={'score':'score'}, color_discrete_sequence=px.colors.sequential.Turbo)
+    if filter:
+        df_sorted = par_perf_df[par_perf_df["hole_par"] == filter].sort_values(by='score')
+    else:
+        df_sorted = par_perf_df.sort_values(by='score')
+    df_sorted['score_name'] = df_sorted.apply(lambda row: score_map(row), axis=1)
+
+    plot = px.pie(df_sorted,names='score_name', color_discrete_sequence=px.colors.sequential.Turbo)
     plot.update_traces(textposition='inside', textinfo='percent+label')
   
 
