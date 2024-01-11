@@ -36,3 +36,4 @@ for i in [None,3,4,5]:
 
     tab_write[z].plotly_chart(plot)
     z+=1
+

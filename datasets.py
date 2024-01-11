@@ -1,10 +1,8 @@
 import streamlit as st 
 import sqlite3 as db 
 import pandas as pd 
-import altair as alt 
 import plotly.express as px 
 import plotly.graph_objects as go
-import numpy as np
 import os 
 from dotenv import load_dotenv
 
