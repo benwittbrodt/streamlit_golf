@@ -4,14 +4,9 @@ import pandas as pd
 import plotly.express as px 
 import plotly.graph_objects as go
 import os 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-DB_LOC = os.getenv('DB_LOC')
 
 cwd = os.getcwd()
-conn = db.connect(DB_LOC)
+conn = db.connect('golf.db')
 cur = conn.cursor()
 
 
