@@ -2,8 +2,13 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Project specific files/folders
 golf_streamlit/
 config.toml
+.devcontainer/
+
+
 # C extensions
 *.so
 
